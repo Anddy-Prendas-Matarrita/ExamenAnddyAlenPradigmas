@@ -1,6 +1,12 @@
 import java.util.List;
 
+/**
+ * Representa la instruccion inicial DATA, que carga los numeros a evaluar.
+ */
 public class DataInstr extends Instruccion {
+    /**
+     * Lista de numeros enteros cargados.
+     */
     private final List<Integer> numeros;
 
     public DataInstr(List<Integer> numeros) {

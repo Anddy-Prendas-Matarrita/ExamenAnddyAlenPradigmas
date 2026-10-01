@@ -1,73 +1,27 @@
 # Decisiones de lenguaje y paradigmas — MiniLang Pipeline
 
-> Nota para la pareja: este documento es un punto de partida. Deben
-> leerlo, ajustarlo a su propia implementación y estar listos para
-> defender cada decisión, tal como exige la sección 12 del examen.
-
 ## 1. ¿Por qué Java resulta adecuado para la etapa de análisis y modelado de instrucciones?
 
-Java es un lenguaje de tipado estático y orientado a objetos, lo que
-encaja bien con una etapa cuyo trabajo central es *reconocer estructura*
-(lexer/parser) y *modelarla como datos* (la jerarquía `Instruccion`).
-El tipado estático detecta en tiempo de compilación errores de
-estructura del propio compilador (por ejemplo, olvidar implementar
-`toIR()` en una subclase), y las clases abstractas con herencia
-permiten representar cada tipo de instrucción del mini-lenguaje como
-un objeto independiente, sin una gran cadena de `if/else` sobre
-cadenas de texto. Además, el manejo de excepciones de Java (`try/catch`)
-es natural para reportar errores léxicos y sintácticos con su número
-de línea, deteniendo el proceso de forma controlada.
+Java, al ser un lenguaje fuertemente tipado estáticamente y enfocado en la Programación Orientada a Objetos (OOP), resulta sumamente conveniente para implementar la etapa inicial de análisis léxico y sintáctico. Durante la lectura del código fuente (`programa.mini`), la necesidad principal es reconocer la estructura, validarla y representarla mediante estructuras de datos bien definidas. El tipado estático asegura en tiempo de compilación que los componentes, como los tokens analizados en `Lexer.java`, coincidan con los tipos esperados y previene errores sutiles.
+En nuestro código concreto, esta ventaja se manifiesta en la jerarquía polimórfica derivada de la clase base abstracta `Instruccion`. Las clases derivadas (`DataInstr`, `FilterInstr`, `MapInstr`, `ReduceInstr` y `PrintInstr`) permiten modelar de forma inequívoca el comportamiento específico de cada comando mediante herencia. Por otra parte, la clase `Parser` gestiona el análisis apoyándose en el manejo de excepciones propio de Java (`ParseException`). Esto facilita el control de flujo y la detención controlada del pipeline cuando se detectan fallos léxicos o sintácticos, como se espera que ocurra en el caso de operadores inválidos.
 
 ## 2. ¿Qué cambia conceptualmente entre describir una transformación con estilo imperativo y funcional?
 
-En estilo imperativo, una transformación se describe como una
-secuencia de pasos que modifican una variable de estado (por ejemplo,
-un ciclo `for` que acumula un total). El foco está en *cómo* se llega
-al resultado, paso a paso, y en el estado intermedio de las variables.
-En estilo funcional (como en la etapa Python de este pipeline), la
-transformación se describe como la aplicación de una función pura
-sobre una colección completa (`filter`, `map`, `reduce`): no hay una
-variable mutable que se va actualizando manualmente, sino una
-composición de funciones que produce un nuevo valor a partir del
-anterior. El foco pasa de *cómo iterar* a *qué transformación aplicar*.
+El cambio conceptual principal radica en cómo se gestiona el estado y cómo se expresa el flujo de la lógica. En el paradigma imperativo, detallaríamos paso a paso *cómo* iterar sobre los elementos usando estructuras de control (como `for` o `while`) y modificaríamos explícitamente el estado mutando variables.
+En contraste, en el paradigma funcional (implementado en nuestra segunda etapa en Python dentro de `ejecutar.py`), el enfoque se centra en *qué* transformación se va a aplicar, manejando los datos de forma declarativa. Los datos fluyen a través de funciones de orden superior (`filter`, `map`, `reduce`) sin mutar las colecciones originales; en su lugar, se generan nuevas colecciones o valores como resultado. Por ejemplo, en nuestro script `ejecutar.py`, en vez de iterar los números con un ciclo para aplicar el comparador o la operación aritmética, empleamos `filter()` y `map()`. Del mismo modo, para condensar la lista usamos `functools.reduce()`, operando mediante funciones puras (o simulaciones controladas de las mismas) que no afectan el estado global del sistema, brindando una semántica de transformación directa y predecible.
 
 ## 3. ¿Qué información se pierde o se conserva al convertir `programa.mini` a `programa.ir`?
 
-Se conserva toda la información *semántica* necesaria para ejecutar el
-programa: los datos iniciales, cada operación con sus parámetros
-(comparador/operador y número) y el tipo de reducción. Se pierde,
-en cambio, información puramente *sintáctica* del texto original: los
-números de línea, el formato exacto de espacios, y cualquier
-posibilidad de error léxico o sintáctico (que ya fue resuelta y
-descartada en la etapa Java). En otras palabras, `programa.ir` es una
-forma "limpia" y sin ambigüedad de las mismas instrucciones, lista
-para ser interpretada mecánicamente sin volver a validar la gramática.
+Durante la transición de `programa.mini` a la Representación Intermedia (IR) almacenada en `programa.ir`, se conserva exclusivamente la *semántica* estructural y operacional de cada instrucción. Cada línea generada a través del método `toIR()` de las distintas subclases retiene la operación fundamental y sus parámetros asociados. Por ejemplo, `FilterInstr` retiene el comparador y el valor, y `DataInstr` los valores de la lista original.
+Lo que se pierde intencionalmente es la *sintaxis superflua* y el formato original: los números de línea, los espacios en blanco, y las palabras clave decorativas que ya fueron parseadas y convalidadas. También se pierde el riesgo de un error sintáctico; el archivo `programa.ir` se asume como absolutamente correcto a nivel de formato, siendo un registro estandarizado listo para ser consumido directamente por la siguiente etapa de ejecución secuencial sin requerir una nueva validación gramatical.
 
 ## 4. ¿Por qué la representación intermedia puede compararse con una fase de un compilador?
 
-Un compilador real suele traducir el código fuente a una representación
-intermedia (IR) antes de generar código final o interpretarlo, porque
-esa IR es más simple, uniforme y desacoplada del lenguaje de entrada.
-En este proyecto, `programa.ir` cumple exactamente ese rol: es el
-resultado del análisis léxico/sintáctico (y aquí también semántico
-básico) de la etapa Java, y sirve de contrato estable para que la
-etapa Python (un lenguaje y paradigma distintos) pueda ejecutar el
-programa sin tener que conocer la gramática original de `programa.mini`.
+Un compilador clásico traduce un lenguaje de alto nivel a un lenguaje máquina o bytecode pasando a través de múltiples fases. Una de las fases centrales es la generación de una Representación Intermedia (IR) que desacopla el lenguaje de origen (front-end) de su entorno de ejecución u optimización (back-end). 
+De forma análoga en nuestro proyecto, el programa original `programa.mini` es analizado por nuestro *front-end* en Java, que valida su corrección gramatical y sintáctica. El producto de este análisis, que se plasma al iterar sobre la lista de objetos `Instruccion` y llamar a sus respectivos métodos `toIR()`, es el archivo `programa.ir`. Esta IR funciona exactamente como el nexo que aisla los detalles sintácticos del lenguaje original, actuando como un contrato simplificado para la etapa de ejecución (*back-end*) en Python. Este desacoplamiento permite que la fase ejecutora trabaje sin necesidad de incorporar lógica de *parsing*, imitando el comportamiento arquitectónico esencial de un compilador.
 
 ## 5. ¿Qué ventajas y costos aparecen al integrar tres lenguajes en lugar de resolver todo con uno?
 
-**Ventajas:** cada etapa usa el lenguaje/paradigma más natural para su
-tarea (Java para modelar estructura con OOP, Python para expresar
-transformaciones de datos en estilo funcional y de forma concisa, MIPS
-para mostrar el nivel más bajo de ejecución con registros y memoria
-explícitos). Esto también obliga a definir contratos de datos claros
-entre etapas, lo cual es una práctica realista en sistemas grandes
-(microservicios, pipelines de datos, etc.).
+**Ventajas:** El uso de Java, Python y Ensamblador MIPS permite aprovechar lo mejor de cada paradigma. Empleamos Java por su robustez, tipado estático y capacidades OOP formidables que resultan perfectas para estructurar lexers y parsers (el front-end). Usamos Python por su extrema flexibilidad y facilidad natural para el paradigma funcional (`filter`, `map`, `reduce`), modelando de forma concisa y elegante la lógica de cálculo en `ejecutar.py`. Finalmente, MIPS permite implementar tareas a un bajo nivel operacional, lo que ayuda a comprender profundamente la manipulación directa de registros y validación computacional al nivel de hardware, por ejemplo, sumando dígitos de un número.
 
-**Costos:** hay más piezas que coordinar (tres entornos de ejecución,
-tres sintaxis distintas), la depuración de errores que cruzan etapas es
-más difícil, y el "acoplamiento" pasa a vivir en el formato de los
-archivos intermedios (`programa.ir`, `resultado.txt`, `entrada_mips.txt`)
-en vez de en llamadas a función directas. Un cambio en el formato de un
-archivo intermedio obliga a revisar todas las etapas que lo leen o
-escriben.
+**Costos:** La principal desventaja es la alta sobrecarga de integración (overhead de sistema). Deben definirse estrictos contratos de archivo intermedio (`programa.ir`, `resultado.txt`, `firma.txt`) y cualquier cambio en el formato de un lenguaje o etapa exige modificar o coordinar de forma manual su procesador contraparte. Además, el flujo de error y el rastreo (debugging) se dividen, forzándonos a auditar los fallos cruzando distintas fronteras de lenguajes, entornos de ejecución y procesos del sistema operativo.

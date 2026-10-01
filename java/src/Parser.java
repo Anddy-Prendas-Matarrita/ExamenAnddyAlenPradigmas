@@ -25,6 +25,14 @@ public class Parser {
     private static final Set<String> REDUCE_TIPOS =
             new HashSet<>(Arrays.asList("SUM", "MAX", "MIN"));
 
+    /**
+     * Convierte una lista de lineas tokenizadas en una lista de instrucciones interpretables (AST).
+     * Valida la estructura gramatical segun el formato de MiniLang.
+     *
+     * @param lineas lista de tokens por linea obtenida del Lexer
+     * @return una lista de objetos Instruccion
+     * @throws ParseException si el codigo no cumple con la gramatica
+     */
     public List<Instruccion> parsear(List<LineaTokens> lineas) throws ParseException {
         List<Instruccion> instrucciones = new ArrayList<>();
 
@@ -127,6 +135,15 @@ public class Parser {
         return instrucciones;
     }
 
+    /**
+     * Utilidad para convertir una cadena en un entero, emitiendo una excepcion
+     * controlada si la conversion falla.
+     *
+     * @param texto el texto a convertir a entero
+     * @param numeroLinea linea actual donde se procesa para reportar en el error
+     * @return el valor entero interpretado
+     * @throws ParseException si el texto no es un numero valido
+     */
     private int parseEntero(String texto, int numeroLinea) throws ParseException {
         try {
             return Integer.parseInt(texto);

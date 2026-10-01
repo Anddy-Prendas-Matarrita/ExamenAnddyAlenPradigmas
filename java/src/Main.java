@@ -8,6 +8,13 @@ import java.util.List;
  * Uso: java Main [programa.mini] [programa.ir]
  */
 public class Main {
+    /**
+     * Metodo principal que ejecuta la Etapa 1 del pipeline.
+     * Lee un archivo MiniLang, lo tokeniza, lo parsea y si es valido
+     * lo exporta a la representacion intermedia (IR).
+     *
+     * @param args argumentos de linea de comandos (ruta de entrada y ruta de salida)
+     */
     public static void main(String[] args) {
         String entrada = args.length > 0 ? args[0] : "programa.mini";
         String salida = args.length > 1 ? args[1] : "programa.ir";

@@ -14,6 +14,14 @@ import java.util.List;
  */
 public class Lexer {
 
+    /**
+     * Lee un archivo de texto y separa cada linea en una lista de tokens validos.
+     *
+     * @param rutaArchivo la ruta del archivo a leer
+     * @return una lista de objetos LineaTokens
+     * @throws IOException si ocurre un error de lectura de archivo
+     * @throws ParseException si se encuentra un caracter no valido en algun token
+     */
     public List<LineaTokens> tokenizar(String rutaArchivo) throws IOException, ParseException {
         List<LineaTokens> lineas = new ArrayList<>();
 

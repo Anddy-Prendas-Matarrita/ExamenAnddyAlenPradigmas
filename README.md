@@ -1,162 +1,151 @@
-# MiniLang Pipeline — Reto Práctico (Parte B)
+# MiniLang Pipeline — Reto Práctico
 
-Pipeline de 3 etapas (Java → Python → MIPS) que lee un programa escrito
-en el mini-lenguaje `MiniLang`, lo valida, lo traduce a una
-representación intermedia, ejecuta las transformaciones en estilo
-funcional y genera una firma de verificación en MIPS.
+## Descripción del Proyecto
 
-## Estructura del proyecto
-
-```
-minilang-pipeline/
-├── README.md                    <- este archivo
-├── documento_decisiones.md      <- respuestas a las 5 preguntas de reflexión
-├── diagrama_pipeline.md         <- diagrama del pipeline y contratos de archivos
-├── programa.mini                <- programa de ejemplo (el del enunciado)
-├── java/
-│   └── src/
-│       ├── Main.java
-│       ├── Lexer.java
-│       ├── LineaTokens.java
-│       ├── Parser.java
-│       ├── ParseException.java
-│       ├── Instruccion.java     <- clase abstracta base
-│       ├── DataInstr.java
-│       ├── FilterInstr.java
-│       ├── MapInstr.java
-│       ├── ReduceInstr.java
-│       └── PrintInstr.java
-├── python/
-│   └── ejecutar.py              <- etapa 2 (estilo funcional)
-├── mips/
-│   ├── preparar_entrada.py      <- puente resultado.txt -> entrada MIPS
-│   └── firma.asm                <- etapa 3 (checksum de verificación)
-└── tests/
-    ├── caso1_valido.mini
-    ├── caso2_operador_invalido.mini
-    ├── caso3_sin_data.mini
-    ├── caso4_reduce_max.mini
-    ├── caso5_filter_vacio.mini
-    ├── caso6_multiples_ops.mini
-    └── resultados_esperados.md  <- qué debe dar cada caso
-```
+El proyecto **MiniLang Pipeline** implementa un traductor y ejecutor por etapas para un lenguaje de programación mínimo y orientado a transformaciones sobre listas llamado `MiniLang`. El sistema, desarrollado como una arquitectura en cadena (pipeline), procesa archivos escritos en este lenguaje utilizando diferentes paradigmas de programación en cada etapa, lo que evidencia el manejo interoperable de lenguajes de alto, medio y bajo nivel.
+Integrantes: Anddy Prendas y Alen Matarrita
 
 ## Requisitos
 
-- JDK 11 o superior (`javac`, `java`)
-- Python 3.8 o superior
-- Un simulador MIPS. Se recomienda **MARS** (`Mars.jar`), disponible en
-  https://dpetersanderson.github.io/ (también sirve SPIM si se prefiere,
-  ajustando la sintaxis de syscalls si difiere).
+Para ejecutar el pipeline en su totalidad, es necesario contar con:
+- **Java**: JDK 11 o superior (herramientas `javac` y `java`).
+- **Python**: Versión 3.8 o superior (`python` o `python3`).
+- **Simulador MIPS**: MARS (MIPS Assembler and Runtime Simulator) a través del archivo `Mars.jar`, o alternativamente QtSPIM.
 
-## Cómo ejecutar el pipeline completo
+## Estructura de Carpetas
 
-Desde la carpeta raíz `minilang-pipeline/`:
+```
+minilang-pipeline/
+├── README.md                    <- Documentación general y de ejecución (este archivo)
+├── documento_decisiones.md      <- Respuestas académicas a las preguntas de diseño y paradigma
+├── diagrama_pipeline.md         <- Diagrama explicativo del flujo y contratos
+├── programa.mini                <- Código fuente de ejemplo en MiniLang
+├── java/
+│   └── src/                   <- Código fuente en Java (Etapa 1: Lexer, Parser y generación de IR)
+├── python/
+│   └── ejecutar.py              <- Código fuente en Python (Etapa 2: Transformaciones funcionales)
+├── mips/
+│   ├── preparar_entrada.py      <- Puente adaptador de resultado a MIPS
+│   └── firma.asm                <- Código fuente en MIPS (Etapa 3: Checksum de validación)
+└── tests/                       <- Archivos de pruebas (.mini) y documentación de salidas
+```
 
-### 1. Etapa Java (compilar una sola vez)
+## Instrucciones EXACTAS de Ejecución (Paso a Paso)
 
-```bash
-cd java/src
+Ejecuta los siguientes comandos desde la raíz del proyecto.
+
+### 1. Etapa Java (Lexer, Parser y OOP)
+Esta etapa valida léxica y sintácticamente el programa y genera la Representación Intermedia (`programa.ir`).
+```powershell
+cd java\src
 javac *.java
+java Main ..\..\programa.mini ..\..\programa.ir
+cd ..\..
+```
+*Si el código es válido, generará el archivo `programa.ir` en la raíz. Si no lo es, mostrará el error y se detendrá.*
+
+### 2. Etapa Python (Ejecución Funcional)
+Esta etapa lee el `programa.ir` y aplica las transformaciones en estilo funcional.
+```powershell
+python python\ejecutar.py programa.ir resultado.txt
+```
+*Generará `resultado.txt` en la raíz, que contendrá las trazas y la conclusión de resultados (RESULT y OPERATIONS).*
+
+### 3. Etapa MIPS (Verificación de Bajo Nivel)
+Esta etapa prepara las variables del resultado anterior y las procesa en el entorno de ensamblador para generar una firma de verificación.
+```powershell
+python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
+java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
+```
+*(Nota: Ajusta la ruta a `Mars.jar` según donde tengas el simulador). El programa creará `firma.txt`.*
+
+## Diagrama del Pipeline y Contratos
+
+```mermaid
+graph TD
+    A[programa.mini] -->|Lexer y Parser| B(Etapa 1: Java)
+    B -->|Genera| C[programa.ir]
+    C -->|Evalúa con Funcional| D(Etapa 2: Python)
+    D -->|Genera| E[resultado.txt]
+    E -->|Prepara Entrada| F[entrada_mips.txt]
+    F -->|Simula y Calcula Checksum| G(Etapa 3: MIPS)
+    G -->|Genera| H[firma.txt]
 ```
 
-Ejecutar sobre el programa de ejemplo:
+### Contratos de Archivo
+- **programa.mini**:
+  Archivo de entrada escrito en MiniLang.
+  *Ejemplo*:
+  ```
+  DATA 3 8 5 10 12
+  FILTER > 5
+  REDUCE SUM
+  PRINT
+  ```
 
-```bash
-java -cp . Main ../../programa.mini ../../programa.ir
+- **programa.ir**:
+  Representación intermedia donde los comandos están purgados de espacios innecesarios y tokens visuales. Separador: `|`.
+  *Ejemplo*:
+  ```
+  DATA|3,8,5,10,12
+  FILTER|>|5
+  REDUCE|SUM
+  PRINT
+  ```
+
+- **resultado.txt**:
+  Registro con la salida secuencial y final de las transformaciones funcionales.
+  *Ejemplo*:
+  ```
+  [8, 10, 12]
+  RESULT=30
+  OPERATIONS=2
+  ```
+
+- **firma.txt**:
+  Contiene los contadores, dígito de verificación y bit de paridad procesado en Ensamblador.
+  *Ejemplo*:
+  ```
+  RESULTADO: 30
+  OPERACIONES: 2
+  DIGITOS_RESULTADO: 2
+  CHECKSUM: 34
+  PARIDAD: 0
+  ```
+
+## Gramática usada (EBNF)
+
+```ebnf
+<programa>   ::= <data> <operacion> { <operacion> } "PRINT"
+<data>       ::= "DATA" <numero> { <numero> }
+<operacion>  ::= <filter> | <map> | <reduce>
+<filter>     ::= "FILTER" <comparador> <numero>
+<map>        ::= "MAP" <aritmetico> <numero>
+<reduce>     ::= "REDUCE" ( "SUM" | "MAX" | "MIN" )
+<comparador> ::= ">" | "<" | ">=" | "<=" | "=="
+<aritmetico> ::= "+" | "-" | "*"
+<numero>     ::= ["-"] <digito> { <digito> }
+<digito>     ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 ```
 
-- Si el programa es válido: se imprime cada instrucción y se genera
-  `programa.ir`.
-- Si hay un error léxico o sintáctico: se imprime
-  `ERROR DE COMPILACIÓN: Error en línea N: ...` y **no** se genera
-  `programa.ir` (el pipeline se detiene ahí).
+## Casos de Prueba (Tabla de Resultados)
 
-### 2. Etapa Python
+| Caso | Archivo de entrada | Propósito | Resultado Esperado | Resultado Obtenido |
+|------|---------------------|-----------|--------------------|--------------------|
+| 1 | `tests/caso1_valido.mini` | Evaluar un programa completo y válido | Pipeline exitoso, RESULT=60, OPERATIONS=3 | Pipeline exitoso, RESULT=60, OPERATIONS=3 |
+| 2 | `tests/caso2_operador_invalido.mini` | Detenerse en un operador de comparación incorrecto (`>>`) | Error de compilación en línea 2. No se genera `.ir` | Error detectado por el lexer/parser. Pipeline interrumpido correctamente |
+| 3 | `tests/caso3_sin_data.mini` | Intentar iniciar sin declarar un conjunto `DATA` primero | Error en línea 1: el programa debe iniciar con `DATA` | Error reportado: No empieza con `DATA` |
+| 4 | `tests/caso4_reduce_max.mini` | Probar una reducción mediante búsqueda de máximo (`REDUCE MAX`) | RESULT=15, OPERATIONS=2 | RESULT=15, OPERATIONS=2 |
+| 5 | `tests/caso5_filter_vacio.mini` | Filtro excesivamente estricto que deja una lista vacía para ser sumada | RESULT=0 (Elemento neutro), OPERATIONS=2 | RESULT=0, OPERATIONS=2 |
+| 6 | `tests/caso6_multiples_ops.mini` | Verificar operaciones compuestas (dos ciclos FILTER y MAP encadenados) | RESULT=40, OPERATIONS=5 | RESULT=40, OPERATIONS=5 |
 
-```bash
-cd ../../python
-python3 ejecutar.py ../programa.ir ../resultado.txt
-```
+## Comportamiento Ante Errores
 
-Genera `resultado.txt` con la traza de cada operación y las líneas
-`RESULT=<valor>` y `OPERATIONS=<cantidad>`.
+El proyecto implementa un principio de interrupción temprana (fail-fast). Si la ejecución tropieza con una anomalía en la etapa 1 (Java), ya sea léxica (caracteres extraños) o sintáctica (estructura equivocada o gramática incumplida), se emite un mensaje formateado por consola:
+`ERROR DE COMPILACIÓN: Error en línea N: [Motivo]`
+En estas circunstancias, **no se genera** el archivo intermedio (`programa.ir`), obligando a detener por completo el pipeline, ya que la etapa posterior de Python espera un archivo de estructura infalible. Del mismo modo, si las etapas posteriores encuentran imposibilidades matemáticas (como obtener el máximo de una lista vacía), también abortan su ejecución imprimiendo sus excepciones subyacentes.
 
-### 3. Etapa MIPS
-
-```bash
-cd ../mips
-python3 preparar_entrada.py ../resultado.txt entrada_mips.txt
-```
-
-Esto crea `entrada_mips.txt` con dos líneas (`RESULT` y `OPERATIONS`
-extraídos de `resultado.txt`).
-
-Luego correr `firma.asm` en MARS, redirigiendo esa entrada por
-consola. Con MARS en modo texto (`nc` = no GUI):
-
-```bash
-java -jar Mars.jar nc firma.asm < entrada_mips.txt
-```
-
-(ajustar la ruta a `Mars.jar` según donde lo tengan instalado). El
-programa MIPS crea `firma.txt` en la carpeta desde donde se ejecuta,
-con `RESULTADO`, `OPERACIONES`, `DIGITOS_RESULTADO`, `CHECKSUM` y
-`PARIDAD`.
-
-> Si usan la interfaz gráfica de MARS en vez de línea de comandos,
-> simplemente carguen `firma.asm`, ejecuten, y cuando pida los dos
-> enteros por consola (Run I/O) escriban los valores de
-> `entrada_mips.txt` (primero `RESULT`, luego `OPERATIONS`).
-
-## Ejecutar los casos de prueba obligatorios
-
-Cada archivo en `tests/*.mini` se corre repitiendo los 3 pasos
-anteriores, cambiando la ruta del archivo de entrada. Por ejemplo,
-para el caso 4:
-
-```bash
-java -cp java/src Main tests/caso4_reduce_max.mini caso4.ir
-python3 python/ejecutar.py caso4.ir caso4_resultado.txt
-```
-
-El resultado que debe dar cada caso (ya verificado) está documentado
-en `tests/resultados_esperados.md`. El **caso 2** (`caso2_operador_invalido.mini`)
-es intencionalmente inválido: sirve como el caso de error obligatorio
-donde el pipeline debe detenerse mostrando evidencia clara del error
-(sección 8 del enunciado).
-
-## Notas de diseño importantes (para la defensa)
-
-- La jerarquía `Instruccion` (Java) usa **herencia y polimorfismo
-  reales**: cada subclase implementa `toIR()` a su manera, y `Main`
-  simplemente llama `instr.toIR()` sin preguntar de qué tipo es cada
-  instrucción.
-- En Python, `FILTER` y `MAP` se implementan sin `for`/`while` en su
-  núcleo (usan `filter()` y `map()`); `REDUCE` usa siempre
-  `functools.reduce()`, incluso para `MAX`/`MIN`, para mantener el
-  estilo funcional de forma consistente.
-- `REDUCE SUM` sobre una lista vacía da `0` (caso válido, no error).
-  `REDUCE MAX`/`MIN` sobre una lista vacía sí se trata como error,
-  porque el máximo/mínimo de un conjunto vacío no está definido.
-- El programa MIPS nunca usa constantes fijas para el checksum: lee
-  `resultado` y `operaciones` como entrada real, y además hace un
-  recorrido (ciclo) para contar los dígitos del resultado, que también
-  se incorpora al cálculo.
-
-## Entregables pendientes que debe completar la pareja
-
-Este proyecto ya cubre el código de las tres etapas, el diagrama, el
-documento de decisiones y los 6 casos de prueba con su documentación.
-Aún deben:
-
-1. Ejecutar realmente el pipeline completo (incluyendo MIPS en MARS o
-   SPIM) y adjuntar los archivos `programa.ir`, `resultado.txt` y
-   `firma.txt` reales de esa ejecución.
-2. Grabar el video de 4 a 6 minutos mostrando una ejecución completa y
-   el caso de error (caso 2).
-3. Revisar y personalizar `documento_decisiones.md` para poder
-   defenderlo con sus propias palabras.
-4. Si agregan alguna operación extra al mini-lenguaje, documentarla y
-   añadir sus propios casos de prueba (sin eliminar DATA/FILTER/MAP/
-   REDUCE/PRINT).
+## Fuentes / Documentación Externa Consultada
+- Documentación Oficial de Java SE 11 (Manejo de colecciones, herencia y polimorfismo).
+- Documentación Oficial de Python 3.8 (`functools.reduce`, paradigma funcional y expresiones).
+- Manual MIPS32 y Guías de Uso de MARS IDE para llamadas al sistema (Syscalls) en ensamblador MIPS.
