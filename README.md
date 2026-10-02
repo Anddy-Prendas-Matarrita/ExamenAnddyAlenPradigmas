@@ -36,11 +36,15 @@ Ejecuta los siguientes comandos desde la raíz del proyecto.
 
 ### 1. Etapa Java (Lexer, Parser y OOP)
 Esta etapa valida léxica y sintácticamente el programa y genera la Representación Intermedia (`programa.ir`).
+
+Compilar (solo la primera vez, o cada vez que se modifique el código fuente):
 ```powershell
-cd java\src
-javac *.java
-java Main ..\..\programa.mini ..\..\programa.ir
-cd ..\..
+javac java\src\*.java
+```
+
+Ejecutar sobre el programa de ejemplo:
+```powershell
+java -cp java\src Main programa.mini programa.ir
 ```
 *Si el código es válido, generará el archivo `programa.ir` en la raíz. Si no lo es, mostrará el error y se detendrá.*
 
@@ -58,6 +62,72 @@ python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
 java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
 ```
 *(Nota: Ajusta la ruta a `Mars.jar` según donde tengas el simulador). El programa creará `firma.txt`.*
+
+## Ejecutar el Pipeline Completo para Cada Caso de Prueba
+
+Todos los comandos se ejecutan desde la raíz del proyecto (`minilang-pipeline`),
+sin necesidad de moverse con `cd`. La redirección `<` hace que MARS lea
+automáticamente los números desde `entrada_mips.txt`, por lo que **no es
+necesario teclear nada manualmente** dentro del simulador.
+
+> Nota: si `python` no está reconocido en el sistema, sustituir por `py` en
+> todos los comandos. Ajustar la ruta a `Mars.jar` si no está dentro de `mips\`.
+
+### Caso 1 — Programa válido
+```powershell
+java -cp java\src Main tests\caso1_valido.mini programa.ir
+python python\ejecutar.py programa.ir resultado.txt
+python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
+java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
+```
+
+### Caso 2 — Operador de comparación inválido (`>>`)
+```powershell
+java -cp java\src Main tests\caso2_operador_invalido.mini programa.ir
+```
+*El pipeline se detiene aquí: se reporta el error de línea 2 y no se genera
+`programa.ir`. No se deben ejecutar los comandos de Python ni MIPS para este caso.*
+
+### Caso 3 — Programa sin `DATA`
+```powershell
+java -cp java\src Main tests\caso3_sin_data.mini programa.ir
+```
+*El pipeline se detiene aquí: se reporta el error de línea 1 y no se genera
+`programa.ir`. No se deben ejecutar los comandos de Python ni MIPS para este caso.*
+
+### Caso 4 — `REDUCE MAX`
+```powershell
+java -cp java\src Main tests\caso4_reduce_max.mini programa.ir
+python python\ejecutar.py programa.ir resultado.txt
+python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
+java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
+```
+
+### Caso 5 — `FILTER` deja la lista vacía
+```powershell
+java -cp java\src Main tests\caso5_filter_vacio.mini programa.ir
+python python\ejecutar.py programa.ir resultado.txt
+python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
+java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
+```
+
+### Caso 6 — Operaciones `FILTER`/`MAP` encadenadas
+```powershell
+java -cp java\src Main tests\caso6_multiples_ops.mini programa.ir
+python python\ejecutar.py programa.ir resultado.txt
+python mips\preparar_entrada.py resultado.txt mips\entrada_mips.txt
+java -jar mips\Mars.jar nc mips\firma.asm < mips\entrada_mips.txt
+```
+
+### Guardar evidencia de un caso antes de correr el siguiente
+Como `programa.ir`, `resultado.txt`, `entrada_mips.txt` y `firma.txt` se
+sobrescriben en cada corrida, conviene copiarlos con otro nombre después de
+cada caso, por ejemplo:
+```powershell
+copy programa.ir evidencia_caso4.ir
+copy resultado.txt evidencia_caso4_resultado.txt
+copy firma.txt evidencia_caso4_firma.txt
+```
 
 ## Diagrama del Pipeline y Contratos
 
